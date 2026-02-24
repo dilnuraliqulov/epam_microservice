@@ -3,8 +3,7 @@ name: Training Workload Microservice CI/CD
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+
 
 env:
   JAVA_VERSION: '21'
