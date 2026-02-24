@@ -1,0 +1,42 @@
+# Build files
+target/
+*.class
+*.jar
+*.war
+
+# IDE files
+.idea/
+*.iml
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+*.env.local
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Test output
+test-output/
+surefire-reports/
+
+# Node modules (if any frontend)
+node_modules/
+
+# Secrets
+*.pem
+*.key
+secrets/
+

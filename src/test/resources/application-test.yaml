@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: training-workload-test
+
+  # H2 Database Configuration for tests
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  # Disable H2 Console in tests
+  h2:
+    console:
+      enabled: false
+
+# Disable Eureka in tests
+eureka:
+  client:
+    enabled: false
+
+# JWT Configuration for tests
+jwt:
+  secret: testSecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345
+  expiration: 86400000
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.example.workload: DEBUG
+
