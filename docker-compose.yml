@@ -12,6 +12,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://host.docker.internal:8761/eureka/
       - JWT_SECRET=${JWT_SECRET:-mySecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
     networks:
       - gym-network
     healthcheck:

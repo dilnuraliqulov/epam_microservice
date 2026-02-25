@@ -2,7 +2,9 @@ package com.example.workload.controller;
 
 import com.example.workload.dto.TrainerSummaryResponse;
 import com.example.workload.dto.WorkloadRequest;
+import com.example.workload.entity.TrainerWorkload;
 import com.example.workload.enums.ActionType;
+import com.example.workload.mapper.WorkloadMapper;
 import com.example.workload.security.JwtTokenProvider;
 import com.example.workload.service.WorkloadService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,12 +22,11 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(WorkloadController.class)
 @DisplayName("WorkloadController Unit Tests")
-@AutoConfigureMockMvc(addFilters = true)
+@AutoConfigureMockMvc
 class WorkloadControllerTest {
 
     @Autowired
@@ -43,6 +44,10 @@ class WorkloadControllerTest {
     private WorkloadService workloadService;
 
     @MockBean
+    private WorkloadMapper workloadMapper;
+
+    @MockBean
+    @SuppressWarnings("unused") // Required for Spring Security context to load
     private JwtTokenProvider jwtTokenProvider;
 
     private ObjectMapper objectMapper;
@@ -196,6 +201,16 @@ class WorkloadControllerTest {
         @WithMockUser
         @DisplayName("Should return trainer summary when trainer exists")
         void getTrainerSummary_ShouldReturnSummary_WhenTrainerExists() throws Exception {
+            // Build TrainerWorkload entity
+            TrainerWorkload trainer = TrainerWorkload.builder()
+                    .username("john.doe")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .isActive(true)
+                    .years(new ArrayList<>())
+                    .build();
+
+            // Build expected response DTO
             TrainerSummaryResponse response = TrainerSummaryResponse.builder()
                     .trainerUsername("john.doe")
                     .trainerFirstName("John")
@@ -214,7 +229,8 @@ class WorkloadControllerTest {
                     ))
                     .build();
 
-            when(workloadService.getTrainerSummary("john.doe")).thenReturn(Optional.of(response));
+            when(workloadService.getTrainerSummary("john.doe")).thenReturn(Optional.of(trainer));
+            when(workloadMapper.toTrainerSummaryResponse(trainer)).thenReturn(response);
 
             // When & Then
             mockMvc.perform(get("/api/v1/workload/john.doe"))
@@ -227,6 +243,8 @@ class WorkloadControllerTest {
                     .andExpect(jsonPath("$.years[0].year").value(2026))
                     .andExpect(jsonPath("$.years[0].months[0].month").value(2))
                     .andExpect(jsonPath("$.years[0].months[0].trainingSummaryDuration").value(10));
+
+            verify(workloadMapper).toTrainerSummaryResponse(trainer);
         }
 
         @Test
@@ -237,6 +255,8 @@ class WorkloadControllerTest {
 
             mockMvc.perform(get("/api/v1/workload/unknown"))
                     .andExpect(status().isNotFound());
+
+            verify(workloadMapper, never()).toTrainerSummaryResponse(any());
         }
 
         @Test

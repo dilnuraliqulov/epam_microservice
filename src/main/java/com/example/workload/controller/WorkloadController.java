@@ -2,6 +2,7 @@ package com.example.workload.controller;
 
 import com.example.workload.dto.TrainerSummaryResponse;
 import com.example.workload.dto.WorkloadRequest;
+import com.example.workload.mapper.WorkloadMapper;
 import com.example.workload.service.WorkloadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class WorkloadController {
 
     private final WorkloadService workloadService;
+    private final WorkloadMapper workloadMapper;
 
 
     @PostMapping
@@ -39,9 +41,9 @@ public class WorkloadController {
         log.info("Getting trainer summary for: {}, transactionId: {}", username, transactionId);
 
         return workloadService.getTrainerSummary(username)
-                .map(summary -> {
+                .map(trainer -> {
                     log.info("Trainer summary found for: {}, transactionId: {}", username, transactionId);
-                    return ResponseEntity.ok(summary);
+                    return ResponseEntity.ok(workloadMapper.toTrainerSummaryResponse(trainer));
                 })
                 .orElseGet(() -> {
                     log.warn("Trainer not found: {}, transactionId: {}", username, transactionId);

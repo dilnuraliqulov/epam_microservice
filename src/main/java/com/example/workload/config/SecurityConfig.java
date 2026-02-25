@@ -1,7 +1,6 @@
 package com.example.workload.config;
 
 import com.example.workload.security.JwtAuthenticationFilter;
-import com.example.workload.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,14 +38,6 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public JwtTokenProvider jwtTokenProvider() {
-        return new JwtTokenProvider(
-                "mySecretKeyForJwtTokenGenerationThatShouldBeLongEnough",
-                3600000 // 1 hour expiration
-        );
     }
 }
 

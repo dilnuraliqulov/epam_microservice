@@ -2,7 +2,7 @@ name: Training Workload Microservice CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 
 env:

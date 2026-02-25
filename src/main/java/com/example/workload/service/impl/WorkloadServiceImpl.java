@@ -1,6 +1,5 @@
 package com.example.workload.service.impl;
 
-import com.example.workload.dto.TrainerSummaryResponse;
 import com.example.workload.dto.WorkloadRequest;
 import com.example.workload.entity.MonthlySummary;
 import com.example.workload.entity.TrainerWorkload;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,41 +27,19 @@ public class WorkloadServiceImpl implements WorkloadService {
         log.debug("Processing workload for trainer: {}, action: {}",
                 request.getTrainerUsername(), request.getActionType());
 
-        TrainerWorkload trainerWorkload = repository.findByUsername(request.getTrainerUsername())
-                .orElseGet(() -> createNewTrainerWorkload(request));
-
-        // Update trainer info
-        trainerWorkload.setFirstName(request.getTrainerFirstName());
-        trainerWorkload.setLastName(request.getTrainerLastName());
-        trainerWorkload.setIsActive(request.getIsActive());
-
-        int year = request.getTrainingDate().getYear();
-        int month = request.getTrainingDate().getMonthValue();
-
-        YearSummary yearSummary = trainerWorkload.getOrCreateYearSummary(year);
-        MonthlySummary monthlySummary = yearSummary.getOrCreateMonthSummary(month);
-
-        if (request.getActionType() == ActionType.ADD) {
-            monthlySummary.addDuration(request.getTrainingDuration());
-            log.info("Added {} hours to trainer {} for {}/{}",
-                    request.getTrainingDuration(), request.getTrainerUsername(), month, year);
-        } else if (request.getActionType() == ActionType.DELETE) {
-            monthlySummary.subtractDuration(request.getTrainingDuration());
-            log.info("Subtracted {} hours from trainer {} for {}/{}",
-                    request.getTrainingDuration(), request.getTrainerUsername(), month, year);
-        }
-
+        TrainerWorkload trainerWorkload = findOrCreateTrainerWorkload(request);
+        updateTrainerInfo(trainerWorkload, request);
+        updateWorkloadDuration(trainerWorkload, request);
         repository.save(trainerWorkload);
+
         log.debug("Workload processed successfully for trainer: {}", request.getTrainerUsername());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<TrainerSummaryResponse> getTrainerSummary(String username) {
+    public Optional<TrainerWorkload> getTrainerSummary(String username) {
         log.debug("Getting trainer summary for: {}", username);
-
-        return repository.findByUsername(username)
-                .map(this::mapToResponse);
+        return repository.findByUsername(username);
     }
 
     @Override
@@ -72,17 +48,16 @@ public class WorkloadServiceImpl implements WorkloadService {
         log.debug("Getting monthly hours for trainer: {}, year: {}, month: {}", username, year, month);
 
         return repository.findByUsername(username)
-                .map(trainer -> {
-                    YearSummary yearSummary = trainer.getYearSummary(year);
-                    if (yearSummary == null) {
-                        return 0;
-                    }
-                    MonthlySummary monthlySummary = yearSummary.getMonthSummary(month);
-                    return monthlySummary != null ? monthlySummary.getTrainingSummaryDuration() : 0;
-                });
+                .map(trainer -> calculateMonthlyHours(trainer, year, month));
+    }
+
+    private TrainerWorkload findOrCreateTrainerWorkload(WorkloadRequest request) {
+        return repository.findByUsername(request.getTrainerUsername())
+                .orElseGet(() -> createNewTrainerWorkload(request));
     }
 
     private TrainerWorkload createNewTrainerWorkload(WorkloadRequest request) {
+        log.debug("Creating new trainer workload for: {}", request.getTrainerUsername());
         return TrainerWorkload.builder()
                 .username(request.getTrainerUsername())
                 .firstName(request.getTrainerFirstName())
@@ -91,24 +66,45 @@ public class WorkloadServiceImpl implements WorkloadService {
                 .build();
     }
 
-    private TrainerSummaryResponse mapToResponse(TrainerWorkload trainer) {
-        return TrainerSummaryResponse.builder()
-                .trainerUsername(trainer.getUsername())
-                .trainerFirstName(trainer.getFirstName())
-                .trainerLastName(trainer.getLastName())
-                .trainerStatus(trainer.getIsActive())
-                .years(trainer.getYears().stream()
-                        .map(yearSummary -> TrainerSummaryResponse.YearSummaryDto.builder()
-                                .year(yearSummary.getYear())
-                                .months(yearSummary.getMonths().stream()
-                                        .map(monthlySummary -> TrainerSummaryResponse.MonthSummaryDto.builder()
-                                                .month(monthlySummary.getMonth())
-                                                .trainingSummaryDuration(monthlySummary.getTrainingSummaryDuration())
-                                                .build())
-                                        .collect(Collectors.toList()))
-                                .build())
-                        .collect(Collectors.toList()))
-                .build();
+    private void updateTrainerInfo(TrainerWorkload trainerWorkload, WorkloadRequest request) {
+        trainerWorkload.setFirstName(request.getTrainerFirstName());
+        trainerWorkload.setLastName(request.getTrainerLastName());
+        trainerWorkload.setIsActive(request.getIsActive());
+    }
+
+    private void updateWorkloadDuration(TrainerWorkload trainerWorkload, WorkloadRequest request) {
+        int year = request.getTrainingDate().getYear();
+        int month = request.getTrainingDate().getMonthValue();
+
+        YearSummary yearSummary = trainerWorkload.getOrCreateYearSummary(year);
+        MonthlySummary monthlySummary = yearSummary.getOrCreateMonthSummary(month);
+
+        if (request.getActionType() == ActionType.ADD) {
+            addWorkloadDuration(monthlySummary, request, month, year);
+        } else if (request.getActionType() == ActionType.DELETE) {
+            subtractWorkloadDuration(monthlySummary, request, month, year);
+        }
+    }
+
+    private void addWorkloadDuration(MonthlySummary monthlySummary, WorkloadRequest request, int month, int year) {
+        monthlySummary.addDuration(request.getTrainingDuration());
+        log.info("Added {} hours to trainer {} for {}/{}",
+                request.getTrainingDuration(), request.getTrainerUsername(), month, year);
+    }
+
+    private void subtractWorkloadDuration(MonthlySummary monthlySummary, WorkloadRequest request, int month, int year) {
+        monthlySummary.subtractDuration(request.getTrainingDuration());
+        log.info("Subtracted {} hours from trainer {} for {}/{}",
+                request.getTrainingDuration(), request.getTrainerUsername(), month, year);
+    }
+
+    private int calculateMonthlyHours(TrainerWorkload trainer, int year, int month) {
+        YearSummary yearSummary = trainer.getYearSummary(year);
+        if (yearSummary == null) {
+            return 0;
+        }
+        MonthlySummary monthlySummary = yearSummary.getMonthSummary(month);
+        return monthlySummary != null ? monthlySummary.getTrainingSummaryDuration() : 0;
     }
 }
 
