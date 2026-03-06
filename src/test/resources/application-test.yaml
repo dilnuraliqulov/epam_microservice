@@ -2,6 +2,17 @@ spring:
   application:
     name: training-workload-test
 
+  # Embedded ActiveMQ for tests
+  activemq:
+    broker-url: vm://embedded?broker.persistent=false
+    packages:
+      trust-all: true
+
+  # JMS Configuration for tests
+  jms:
+    listener:
+      acknowledge-mode: auto
+
   # H2 Database Configuration for tests
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
@@ -30,6 +41,12 @@ eureka:
 jwt:
   secret: testSecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345
   expiration: 86400000
+
+# Workload Queue Configuration for tests
+workload:
+  queue:
+    name: workload.queue.test
+    dlq-name: workload.dlq.test
 
 # Logging
 logging:
