@@ -2,16 +2,12 @@ spring:
   application:
     name: training-workload-test
 
-  # Embedded ActiveMQ for tests
+  # Embedded ActiveMQ for tests - disabled
   activemq:
     broker-url: vm://embedded?broker.persistent=false
     packages:
       trust-all: true
 
-  # JMS Configuration for tests
-  jms:
-    listener:
-      acknowledge-mode: auto
 
   # H2 Database Configuration for tests
   datasource:
@@ -31,6 +27,20 @@ spring:
   h2:
     console:
       enabled: false
+
+  # Disable MongoDB auto-configuration
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.jms.activemq.ActiveMQAutoConfiguration
+      - org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration
+
+  # Disable JMS for tests
+  jms:
+    enabled: false
+    listener:
+      auto-startup: false
 
 # Disable Eureka in tests
 eureka:

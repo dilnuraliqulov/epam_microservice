@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: training-workload-test-mongo
+
+  profiles:
+    active: mongo
+
+  # Embedded MongoDB for tests - controlled by Flapdoodle
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/test_workload
+      database: test_workload
+
+  # Embedded ActiveMQ for tests
+  activemq:
+    broker-url: vm://embedded?broker.persistent=false
+    packages:
+      trust-all: true
+
+  # JMS Configuration for tests
+  jms:
+    listener:
+      acknowledge-mode: auto
+
+  # Disable JPA/H2 auto-configuration
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
+# Disable Eureka in tests
+eureka:
+  client:
+    enabled: false
+
+# JWT Configuration for tests
+jwt:
+  secret: testSecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345
+  expiration: 86400000
+
+# Workload Queue Configuration for tests
+workload:
+  queue:
+    name: workload.queue.test
+    dlq-name: workload.dlq.test
+
+# Logging
+logging:
+  level:
+    root: WARN
+    com.example.workload: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+# Embedded MongoDB configuration
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 6.0.2
+

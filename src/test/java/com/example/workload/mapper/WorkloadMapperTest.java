@@ -1,15 +1,14 @@
 package com.example.workload.mapper;
 
 import com.example.workload.dto.TrainerSummaryResponse;
-import com.example.workload.entity.MonthlySummary;
-import com.example.workload.entity.TrainerWorkload;
-import com.example.workload.entity.YearSummary;
+import com.example.workload.entity.TrainerWorkloadSummary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,17 +27,17 @@ class WorkloadMapperTest {
     class ToTrainerSummaryResponseTests {
 
         @Test
-        @DisplayName("Should return null when trainer is null")
-        void shouldReturnNullWhenTrainerIsNull() {
+        @DisplayName("Should return null when summary is null")
+        void shouldReturnNullWhenSummaryIsNull() {
             TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(null);
 
             assertThat(result).isNull();
         }
 
         @Test
-        @DisplayName("Should map trainer with empty years")
-        void shouldMapTrainerWithEmptyYears() {
-            TrainerWorkload trainer = TrainerWorkload.builder()
+        @DisplayName("Should map summary with empty years")
+        void shouldMapSummaryWithEmptyYears() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
                     .username("john.doe")
                     .firstName("John")
                     .lastName("Doe")
@@ -46,7 +45,7 @@ class WorkloadMapperTest {
                     .years(new ArrayList<>())
                     .build();
 
-            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(trainer);
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
 
             assertThat(result).isNotNull();
             assertThat(result.getTrainerUsername()).isEqualTo("john.doe");
@@ -57,9 +56,9 @@ class WorkloadMapperTest {
         }
 
         @Test
-        @DisplayName("Should map trainer with null years list")
-        void shouldMapTrainerWithNullYears() {
-            TrainerWorkload trainer = TrainerWorkload.builder()
+        @DisplayName("Should map summary with null years list")
+        void shouldMapSummaryWithNullYears() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
                     .username("john.doe")
                     .firstName("John")
                     .lastName("Doe")
@@ -67,50 +66,39 @@ class WorkloadMapperTest {
                     .years(null)
                     .build();
 
-            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(trainer);
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
 
             assertThat(result).isNotNull();
             assertThat(result.getYears()).isEmpty();
         }
 
         @Test
-        @DisplayName("Should map trainer with complete year and month data")
-        void shouldMapTrainerWithCompleteData() {
-            // Build entity structure
-            TrainerWorkload trainer = TrainerWorkload.builder()
+        @DisplayName("Should map summary with complete year and month data")
+        void shouldMapSummaryWithCompleteData() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
                     .username("john.doe")
                     .firstName("John")
                     .lastName("Doe")
                     .isActive(true)
-                    .years(new ArrayList<>())
+                    .years(List.of(
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2026)
+                                    .months(List.of(
+                                            TrainerWorkloadSummary.MonthSummaryData.builder()
+                                                    .month(1)
+                                                    .trainingSummaryDuration(10)
+                                                    .build(),
+                                            TrainerWorkloadSummary.MonthSummaryData.builder()
+                                                    .month(2)
+                                                    .trainingSummaryDuration(15)
+                                                    .build()
+                                    ))
+                                    .build()
+                    ))
                     .build();
 
-            YearSummary yearSummary = YearSummary.builder()
-                    .year(2026)
-                    .trainerWorkload(trainer)
-                    .months(new ArrayList<>())
-                    .build();
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
 
-            MonthlySummary monthlySummary1 = MonthlySummary.builder()
-                    .month(1)
-                    .trainingSummaryDuration(10)
-                    .yearSummary(yearSummary)
-                    .build();
-
-            MonthlySummary monthlySummary2 = MonthlySummary.builder()
-                    .month(2)
-                    .trainingSummaryDuration(15)
-                    .yearSummary(yearSummary)
-                    .build();
-
-            yearSummary.getMonths().add(monthlySummary1);
-            yearSummary.getMonths().add(monthlySummary2);
-            trainer.getYears().add(yearSummary);
-
-            // Execute
-            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(trainer);
-
-            // Verify
             assertThat(result).isNotNull();
             assertThat(result.getTrainerUsername()).isEqualTo("john.doe");
             assertThat(result.getTrainerFirstName()).isEqualTo("John");
@@ -118,7 +106,7 @@ class WorkloadMapperTest {
             assertThat(result.getTrainerStatus()).isTrue();
 
             assertThat(result.getYears()).hasSize(1);
-            TrainerSummaryResponse.YearSummaryDto yearDto = result.getYears().get(0);
+            TrainerSummaryResponse.YearSummaryDto yearDto = result.getYears().getFirst();
             assertThat(yearDto.getYear()).isEqualTo(2026);
 
             assertThat(yearDto.getMonths()).hasSize(2);
@@ -129,76 +117,93 @@ class WorkloadMapperTest {
         }
 
         @Test
-        @DisplayName("Should map trainer with multiple years")
-        void shouldMapTrainerWithMultipleYears() {
-            TrainerWorkload trainer = TrainerWorkload.builder()
+        @DisplayName("Should map summary with multiple years")
+        void shouldMapSummaryWithMultipleYears() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
                     .username("jane.doe")
                     .firstName("Jane")
                     .lastName("Doe")
                     .isActive(false)
-                    .years(new ArrayList<>())
+                    .years(List.of(
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2025)
+                                    .months(List.of(
+                                            TrainerWorkloadSummary.MonthSummaryData.builder()
+                                                    .month(12)
+                                                    .trainingSummaryDuration(5)
+                                                    .build()
+                                    ))
+                                    .build(),
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2026)
+                                    .months(List.of(
+                                            TrainerWorkloadSummary.MonthSummaryData.builder()
+                                                    .month(1)
+                                                    .trainingSummaryDuration(8)
+                                                    .build()
+                                    ))
+                                    .build()
+                    ))
                     .build();
 
-            YearSummary year2025 = YearSummary.builder()
-                    .year(2025)
-                    .trainerWorkload(trainer)
-                    .months(new ArrayList<>())
-                    .build();
-            year2025.getMonths().add(MonthlySummary.builder()
-                    .month(12)
-                    .trainingSummaryDuration(5)
-                    .yearSummary(year2025)
-                    .build());
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
 
-            YearSummary year2026 = YearSummary.builder()
-                    .year(2026)
-                    .trainerWorkload(trainer)
-                    .months(new ArrayList<>())
-                    .build();
-            year2026.getMonths().add(MonthlySummary.builder()
-                    .month(1)
-                    .trainingSummaryDuration(8)
-                    .yearSummary(year2026)
-                    .build());
-
-            trainer.getYears().add(year2025);
-            trainer.getYears().add(year2026);
-
-            // Execute
-            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(trainer);
-
-            // Verify
             assertThat(result).isNotNull();
+            assertThat(result.getTrainerUsername()).isEqualTo("jane.doe");
             assertThat(result.getTrainerStatus()).isFalse();
             assertThat(result.getYears()).hasSize(2);
+
             assertThat(result.getYears().get(0).getYear()).isEqualTo(2025);
+            assertThat(result.getYears().get(0).getMonths().getFirst().getMonth()).isEqualTo(12);
+            assertThat(result.getYears().get(0).getMonths().getFirst().getTrainingSummaryDuration()).isEqualTo(5);
+
             assertThat(result.getYears().get(1).getYear()).isEqualTo(2026);
+            assertThat(result.getYears().get(1).getMonths().getFirst().getMonth()).isEqualTo(1);
+            assertThat(result.getYears().get(1).getMonths().getFirst().getTrainingSummaryDuration()).isEqualTo(8);
         }
 
         @Test
-        @DisplayName("Should handle year with null months")
-        void shouldHandleYearWithNullMonths() {
-            TrainerWorkload trainer = TrainerWorkload.builder()
-                    .username("test.user")
-                    .firstName("Test")
-                    .lastName("User")
+        @DisplayName("Should map year with empty months")
+        void shouldMapYearWithEmptyMonths() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
+                    .username("john.doe")
+                    .firstName("John")
+                    .lastName("Doe")
                     .isActive(true)
-                    .years(new ArrayList<>())
+                    .years(List.of(
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2026)
+                                    .months(new ArrayList<>())
+                                    .build()
+                    ))
                     .build();
 
-            YearSummary yearSummary = YearSummary.builder()
-                    .year(2026)
-                    .trainerWorkload(trainer)
-                    .months(null)
-                    .build();
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
 
-            trainer.getYears().add(yearSummary);
-
-            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(trainer);
-
-            assertThat(result).isNotNull();
             assertThat(result.getYears()).hasSize(1);
-            assertThat(result.getYears().get(0).getMonths()).isEmpty();
+            assertThat(result.getYears().getFirst().getMonths()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Should map year with null months")
+        void shouldMapYearWithNullMonths() {
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
+                    .username("john.doe")
+                    .firstName("John")
+                    .lastName("Doe")
+                    .isActive(true)
+                    .years(List.of(
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2026)
+                                    .months(null)
+                                    .build()
+                    ))
+                    .build();
+
+            TrainerSummaryResponse result = workloadMapper.toTrainerSummaryResponse(summary);
+
+            assertThat(result.getYears()).hasSize(1);
+            assertThat(result.getYears().getFirst().getMonths()).isEmpty();
         }
     }
 }
