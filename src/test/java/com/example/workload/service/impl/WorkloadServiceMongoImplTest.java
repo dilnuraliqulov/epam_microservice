@@ -1,12 +1,12 @@
 package com.example.workload.service.impl;
 
 import com.example.workload.dto.WorkloadRequest;
-import com.example.workload.entity.MonthlySummary;
-import com.example.workload.entity.TrainerWorkload;
 import com.example.workload.entity.TrainerWorkloadSummary;
-import com.example.workload.entity.YearSummary;
+import com.example.workload.entity.mongo.MonthSummaryEmbedded;
+import com.example.workload.entity.mongo.TrainerWorkloadDocument;
+import com.example.workload.entity.mongo.YearSummaryEmbedded;
 import com.example.workload.enums.ActionType;
-import com.example.workload.repository.TrainerWorkloadRepository;
+import com.example.workload.repository.mongo.TrainerWorkloadMongoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,20 +28,20 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("WorkloadServiceImpl Unit Tests")
-class WorkloadServiceImplTest {
+@DisplayName("WorkloadServiceMongoImpl Unit Tests")
+class WorkloadServiceMongoImplTest {
 
     @Mock
-    private TrainerWorkloadRepository repository;
+    private TrainerWorkloadMongoRepository repository;
 
     @InjectMocks
-    private WorkloadServiceImpl workloadService;
+    private WorkloadServiceMongoImpl workloadService;
 
     @Captor
-    private ArgumentCaptor<TrainerWorkload> trainerWorkloadCaptor;
+    private ArgumentCaptor<TrainerWorkloadDocument> trainerWorkloadCaptor;
 
     private WorkloadRequest workloadRequest;
-    private TrainerWorkload existingTrainer;
+    private TrainerWorkloadDocument existingTrainer;
 
     @BeforeEach
     void setUp() {
@@ -55,7 +55,8 @@ class WorkloadServiceImplTest {
                 .actionType(ActionType.ADD)
                 .build();
 
-        existingTrainer = TrainerWorkload.builder()
+        existingTrainer = TrainerWorkloadDocument.builder()
+                .id("mongo-id-123")
                 .username("john.doe")
                 .firstName("John")
                 .lastName("Doe")
@@ -72,12 +73,12 @@ class WorkloadServiceImplTest {
         @DisplayName("Should create new trainer workload when trainer does not exist")
         void processWorkload_ShouldCreateNewTrainerWorkload_WhenTrainerDoesNotExist() {
             when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
             assertThat(savedTrainer.getUsername()).isEqualTo("john.doe");
             assertThat(savedTrainer.getFirstName()).isEqualTo("John");
@@ -85,11 +86,11 @@ class WorkloadServiceImplTest {
             assertThat(savedTrainer.getIsActive()).isTrue();
             assertThat(savedTrainer.getYears()).hasSize(1);
 
-            YearSummary yearSummary = savedTrainer.getYears().get(0);
+            YearSummaryEmbedded yearSummary = savedTrainer.getYears().get(0);
             assertThat(yearSummary.getYear()).isEqualTo(2026);
             assertThat(yearSummary.getMonths()).hasSize(1);
 
-            MonthlySummary monthlySummary = yearSummary.getMonths().get(0);
+            MonthSummaryEmbedded monthlySummary = yearSummary.getMonths().get(0);
             assertThat(monthlySummary.getMonth()).isEqualTo(2);
             assertThat(monthlySummary.getTrainingSummaryDuration()).isEqualTo(2);
         }
@@ -97,30 +98,28 @@ class WorkloadServiceImplTest {
         @Test
         @DisplayName("Should add hours to existing trainer workload")
         void processWorkload_ShouldAddHours_WhenTrainerExists() {
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 
-            MonthlySummary monthlySummary = MonthlySummary.builder()
+            MonthSummaryEmbedded monthlySummary = MonthSummaryEmbedded.builder()
                     .month(2)
                     .trainingSummaryDuration(5)
-                    .yearSummary(yearSummary)
                     .build();
 
             yearSummary.getMonths().add(monthlySummary);
             existingTrainer.getYears().add(yearSummary);
 
             when(repository.findByUsername("john.doe")).thenReturn(Optional.of(existingTrainer));
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
-            MonthlySummary updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
+            MonthSummaryEmbedded updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
             assertThat(updatedMonthlySummary.getTrainingSummaryDuration()).isEqualTo(7); // 5 + 2
         }
 
@@ -129,30 +128,28 @@ class WorkloadServiceImplTest {
         void processWorkload_ShouldSubtractHours_WhenActionTypeIsDelete() {
             workloadRequest.setActionType(ActionType.DELETE);
 
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 
-            MonthlySummary monthlySummary = MonthlySummary.builder()
+            MonthSummaryEmbedded monthlySummary = MonthSummaryEmbedded.builder()
                     .month(2)
                     .trainingSummaryDuration(5)
-                    .yearSummary(yearSummary)
                     .build();
 
             yearSummary.getMonths().add(monthlySummary);
             existingTrainer.getYears().add(yearSummary);
 
             when(repository.findByUsername("john.doe")).thenReturn(Optional.of(existingTrainer));
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
-            MonthlySummary updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
+            MonthSummaryEmbedded updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
             assertThat(updatedMonthlySummary.getTrainingSummaryDuration()).isEqualTo(3); // 5 - 2
         }
 
@@ -162,30 +159,28 @@ class WorkloadServiceImplTest {
             workloadRequest.setActionType(ActionType.DELETE);
             workloadRequest.setTrainingDuration(10);
 
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 
-            MonthlySummary monthlySummary = MonthlySummary.builder()
+            MonthSummaryEmbedded monthlySummary = MonthSummaryEmbedded.builder()
                     .month(2)
                     .trainingSummaryDuration(5)
-                    .yearSummary(yearSummary)
                     .build();
 
             yearSummary.getMonths().add(monthlySummary);
             existingTrainer.getYears().add(yearSummary);
 
             when(repository.findByUsername("john.doe")).thenReturn(Optional.of(existingTrainer));
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
-            MonthlySummary updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
+            MonthSummaryEmbedded updatedMonthlySummary = savedTrainer.getYearSummary(2026).getMonthSummary(2);
             assertThat(updatedMonthlySummary.getTrainingSummaryDuration()).isEqualTo(0);
         }
 
@@ -195,12 +190,12 @@ class WorkloadServiceImplTest {
             workloadRequest.setTrainingDate(LocalDate.of(2027, 3, 15));
 
             when(repository.findByUsername("john.doe")).thenReturn(Optional.of(existingTrainer));
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
             assertThat(savedTrainer.getYears()).hasSize(1);
             assertThat(savedTrainer.getYearSummary(2027)).isNotNull();
@@ -214,12 +209,12 @@ class WorkloadServiceImplTest {
             workloadRequest.setIsActive(false);
 
             when(repository.findByUsername("john.doe")).thenReturn(Optional.of(existingTrainer));
-            when(repository.save(any(TrainerWorkload.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(repository.save(any(TrainerWorkloadDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             workloadService.processWorkload(workloadRequest);
 
             verify(repository).save(trainerWorkloadCaptor.capture());
-            TrainerWorkload savedTrainer = trainerWorkloadCaptor.getValue();
+            TrainerWorkloadDocument savedTrainer = trainerWorkloadCaptor.getValue();
 
             assertThat(savedTrainer.getFirstName()).isEqualTo("Johnny");
             assertThat(savedTrainer.getIsActive()).isFalse();
@@ -233,16 +228,14 @@ class WorkloadServiceImplTest {
         @Test
         @DisplayName("Should return trainer summary when trainer exists")
         void getTrainerSummary_ShouldReturnSummary_WhenTrainerExists() {
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 
-            MonthlySummary monthlySummary = MonthlySummary.builder()
+            MonthSummaryEmbedded monthlySummary = MonthSummaryEmbedded.builder()
                     .month(2)
                     .trainingSummaryDuration(10)
-                    .yearSummary(yearSummary)
                     .build();
 
             yearSummary.getMonths().add(monthlySummary);
@@ -284,16 +277,14 @@ class WorkloadServiceImplTest {
         @Test
         @DisplayName("Should return monthly hours when trainer and month exist")
         void getMonthlyHours_ShouldReturnHours_WhenTrainerAndMonthExist() {
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 
-            MonthlySummary monthlySummary = MonthlySummary.builder()
+            MonthSummaryEmbedded monthlySummary = MonthSummaryEmbedded.builder()
                     .month(2)
                     .trainingSummaryDuration(15)
-                    .yearSummary(yearSummary)
                     .build();
 
             yearSummary.getMonths().add(monthlySummary);
@@ -321,9 +312,8 @@ class WorkloadServiceImplTest {
         @Test
         @DisplayName("Should return zero when month does not exist")
         void getMonthlyHours_ShouldReturnZero_WhenMonthDoesNotExist() {
-            YearSummary yearSummary = YearSummary.builder()
+            YearSummaryEmbedded yearSummary = YearSummaryEmbedded.builder()
                     .year(2026)
-                    .trainerWorkload(existingTrainer)
                     .months(new ArrayList<>())
                     .build();
 

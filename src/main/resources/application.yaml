@@ -2,28 +2,23 @@ spring:
   application:
     name: training-workload
 
-  # H2 Database Configuration
-  datasource:
-    url: jdbc:h2:mem:workloaddb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+  # Default profile - can be overridden with spring.profiles.active=mongo
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:h2}
 
-  # JPA Configuration
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
+  # ActiveMQ Configuration
+  activemq:
+    broker-url: ${ACTIVEMQ_BROKER_URL:tcp://localhost:61616}
+    user: ${ACTIVEMQ_USER:admin}
+    password: ${ACTIVEMQ_PASSWORD:admin}
+    packages:
+      trust-all: true
 
-  # H2 Console
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  # JMS Configuration
+  jms:
+    listener:
+      auto-startup: true
+
 
 server:
   port: 8081
@@ -43,6 +38,12 @@ eureka:
 jwt:
   secret: ${JWT_SECRET:mySecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345}
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+# Workload Queue Configuration
+workload:
+  queue:
+    name: ${WORKLOAD_QUEUE_NAME:workload.queue}
+    dlq-name: ${WORKLOAD_DLQ_NAME:workload.dlq}
 
 # Resilience4j Circuit Breaker Configuration
 resilience4j:

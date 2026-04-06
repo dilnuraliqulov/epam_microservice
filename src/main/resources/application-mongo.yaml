@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: mongo
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/training_workload}
+      database: ${MONGODB_DATABASE:training_workload}
+
+  # Disable JPA/H2 auto-configuration for MongoDB profile
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
+logging:
+  level:
+    org.springframework.data.mongodb: DEBUG
+

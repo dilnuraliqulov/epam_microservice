@@ -17,7 +17,7 @@ public class MonthlySummary {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "month", nullable = false)
+    @Column(name = "workload_month", nullable = false)
     private Integer month;
 
     @Column(name = "training_summary_duration", nullable = false)

@@ -8,26 +8,30 @@ import java.util.List;
 
 @Entity
 @Table(name = "year_summary")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(exclude = "trainerWorkload")
-@ToString(exclude = "trainerWorkload")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class YearSummary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
-    @Column(name = "year", nullable = false)
+    @Column(name = "workload_year", nullable = false)
     private Integer year;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trainer_username", nullable = false)
     private TrainerWorkload trainerWorkload;
 
-    @OneToMany(mappedBy = "yearSummary", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "yearSummary",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
     @Builder.Default
     private List<MonthlySummary> months = new ArrayList<>();
 
@@ -46,9 +50,13 @@ public class YearSummary {
                     .trainingSummaryDuration(0)
                     .yearSummary(this)
                     .build();
-            months.add(monthlySummary);
+            addMonth(monthlySummary);
         }
         return monthlySummary;
     }
-}
 
+    public void addMonth(MonthlySummary month) {
+        months.add(month);
+        month.setYearSummary(this);
+    }
+}

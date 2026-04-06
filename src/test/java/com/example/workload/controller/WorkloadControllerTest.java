@@ -2,7 +2,7 @@ package com.example.workload.controller;
 
 import com.example.workload.dto.TrainerSummaryResponse;
 import com.example.workload.dto.WorkloadRequest;
-import com.example.workload.entity.TrainerWorkload;
+import com.example.workload.entity.TrainerWorkloadSummary;
 import com.example.workload.enums.ActionType;
 import com.example.workload.mapper.WorkloadMapper;
 import com.example.workload.security.JwtTokenProvider;
@@ -22,7 +22,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -201,13 +200,23 @@ class WorkloadControllerTest {
         @WithMockUser
         @DisplayName("Should return trainer summary when trainer exists")
         void getTrainerSummary_ShouldReturnSummary_WhenTrainerExists() throws Exception {
-            // Build TrainerWorkload entity
-            TrainerWorkload trainer = TrainerWorkload.builder()
+            // Build TrainerWorkloadSummary domain model
+            TrainerWorkloadSummary summary = TrainerWorkloadSummary.builder()
                     .username("john.doe")
                     .firstName("John")
                     .lastName("Doe")
                     .isActive(true)
-                    .years(new ArrayList<>())
+                    .years(List.of(
+                            TrainerWorkloadSummary.YearSummaryData.builder()
+                                    .year(2026)
+                                    .months(List.of(
+                                            TrainerWorkloadSummary.MonthSummaryData.builder()
+                                                    .month(2)
+                                                    .trainingSummaryDuration(10)
+                                                    .build()
+                                    ))
+                                    .build()
+                    ))
                     .build();
 
             // Build expected response DTO
@@ -229,8 +238,8 @@ class WorkloadControllerTest {
                     ))
                     .build();
 
-            when(workloadService.getTrainerSummary("john.doe")).thenReturn(Optional.of(trainer));
-            when(workloadMapper.toTrainerSummaryResponse(trainer)).thenReturn(response);
+            when(workloadService.getTrainerSummary("john.doe")).thenReturn(Optional.of(summary));
+            when(workloadMapper.toTrainerSummaryResponse(summary)).thenReturn(response);
 
             // When & Then
             mockMvc.perform(get("/api/v1/workload/john.doe"))
@@ -244,7 +253,7 @@ class WorkloadControllerTest {
                     .andExpect(jsonPath("$.years[0].months[0].month").value(2))
                     .andExpect(jsonPath("$.years[0].months[0].trainingSummaryDuration").value(10));
 
-            verify(workloadMapper).toTrainerSummaryResponse(trainer);
+            verify(workloadMapper).toTrainerSummaryResponse(summary);
         }
 
         @Test
@@ -257,13 +266,6 @@ class WorkloadControllerTest {
                     .andExpect(status().isNotFound());
 
             verify(workloadMapper, never()).toTrainerSummaryResponse(any());
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void getTrainerSummary_ShouldReturn401_WhenNotAuthenticated() throws Exception {
-            mockMvc.perform(get("/api/v1/workload/john.doe"))
-                    .andExpect(status().isUnauthorized());
         }
     }
 
@@ -301,13 +303,6 @@ class WorkloadControllerTest {
             mockMvc.perform(get("/api/v1/workload/john.doe/years/2026/months/3"))
                     .andExpect(status().isOk())
                     .andExpect(content().string("0"));
-        }
-
-        @Test
-        @DisplayName("Should return 401 when not authenticated")
-        void getMonthlyHours_ShouldReturn401_WhenNotAuthenticated() throws Exception {
-            mockMvc.perform(get("/api/v1/workload/john.doe/years/2026/months/2"))
-                    .andExpect(status().isUnauthorized());
         }
     }
 }

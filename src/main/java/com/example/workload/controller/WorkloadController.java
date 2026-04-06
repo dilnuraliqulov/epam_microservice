@@ -41,9 +41,9 @@ public class WorkloadController {
         log.info("Getting trainer summary for: {}, transactionId: {}", username, transactionId);
 
         return workloadService.getTrainerSummary(username)
-                .map(trainer -> {
+                .map(summary -> {
                     log.info("Trainer summary found for: {}, transactionId: {}", username, transactionId);
-                    return ResponseEntity.ok(workloadMapper.toTrainerSummaryResponse(trainer));
+                    return ResponseEntity.ok(workloadMapper.toTrainerSummaryResponse(summary));
                 })
                 .orElseGet(() -> {
                     log.warn("Trainer not found: {}, transactionId: {}", username, transactionId);

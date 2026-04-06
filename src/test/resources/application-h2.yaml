@@ -21,6 +21,10 @@ workload:
     name: workload.queue.test
     dlq-name: workload.dlq.test
 
+logging:
+  level:
+    org.springframework.data.mongodb: DEBUG
+
 cucumber:
   publish:
     quiet: true
