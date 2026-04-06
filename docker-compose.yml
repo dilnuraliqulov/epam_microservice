@@ -1,0 +1,59 @@
+
+services:
+  # ActiveMQ Message Broker
+  activemq:
+    image: apache/activemq-classic:5.18.3
+    container_name: activemq
+    ports:
+      - "61616:61616"  # OpenWire
+      - "8161:8161"    # Web Console
+    environment:
+      - ACTIVEMQ_USERNAME=admin
+      - ACTIVEMQ_PASSWORD=admin
+    networks:
+      - gym-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8161/admin"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # Training Workload Microservice
+  training-workload:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: training-workload
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://host.docker.internal:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-mySecretKeyForJWTTokenAuthenticationThatIsAtLeast256BitsLong12345}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+      - WORKLOAD_QUEUE_NAME=workload.queue
+    depends_on:
+      activemq:
+        condition: service_healthy
+    networks:
+      - gym-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+    gym-network:
+        external: true
+
+volumes:
+  app-logs:
+

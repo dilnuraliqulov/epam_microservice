@@ -1,0 +1,39 @@
+spring:
+  profiles: docker-no-integration
+
+  # Use in-memory H2 database instead of real DB
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  # Disable JMS / ActiveMQ
+  jms:
+    listener:
+      auto-startup: false
+  activemq:
+    broker-url: ""
+  sql:
+    init:
+      platform: h2
+
+server:
+  port: 8080  # Change to 8081 for Report service if needed
+
+logging:
+  level:
+    root: INFO
+    com.example.workload: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Disable other integrations if needed
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false

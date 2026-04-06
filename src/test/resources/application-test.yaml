@@ -1,0 +1,29 @@
+spring:
+  activemq:
+    broker-url: vm://embedded?broker.persistent=false
+    in-memory: true
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+jwt:
+  secret: test-secret-key-for-cucumber-tests-only
+  expiration: 3600000
+
+workload:
+  queue:
+    name: workload.queue.test
+    dlq-name: workload.dlq.test
+
+cucumber:
+  publish:
+    quiet: true
+    enabled: false
+  ansi-colors:
+    disabled: false
